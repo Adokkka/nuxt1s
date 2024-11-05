@@ -1,12 +1,6 @@
 <template>
   <v-app dark>
-    <v-navigation-drawer
-      v-model="drawer"
-      :mini-variant="miniVariant"
-      :clipped="clipped"
-      fixed
-      app
-    >
+    <v-navigation-drawer v-model="drawer" fixed app>
       <v-list>
         <v-list-item
           v-for="link in links"
@@ -43,10 +37,16 @@
         </v-list-group>
       </v-list>
     </v-navigation-drawer>
+    <v-main>
+      <v-container>
+        <nuxt />
+      </v-container>
+    </v-main>
   </v-app>
 </template>
 
 <script>
+import { createVuetify } from "vuetify";
 export default {
   name: "DefaultLayout",
   data: () => ({
