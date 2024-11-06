@@ -1,66 +1,81 @@
 <template>
   <v-container>
-    <v-row>
-      <!-- Left Column: User Selection Field -->
-      <v-col cols="4">
-        <v-card>
-          <v-card-title>User Selection</v-card-title>
-          <v-card-text>
-            <v-autocomplete
-              max-height="300"
-              v-model="selectedUser"
-              :items="userList"
-              item-text="full_name"
-              item-value="id"
-              label="Select or write user"
-              return-object
-              outlined
-            ></v-autocomplete>
-          </v-card-text>
-        </v-card>
+    <v-row margin="100">
+      <v-col>
+        <h1>WebSRF_FORM</h1>
       </v-col>
-      <v-spacer />
-      <!-- Right Column: Project Selection Field -->
-      <v-col cols="4" class="text-right">
-        <v-card>
-          <v-card-title>Project Selection</v-card-title>
-          <v-card-text>
-            <v-autocomplete
-              v-model="selectedProject"
-              :items="projectList"
-              item-text="name"
-              item-value="uid"
-              label="Select Project"
-              return-object
-              outlined
-            ></v-autocomplete>
-          </v-card-text>
-        </v-card>
-      </v-col>
+      <v-sheet class="mx-auto" width="300" color="#121212">
+        <v-form disabled>
+          <v-text-field v-model="firstName" label="WEBSRF NO."></v-text-field>
+          <v-text-field v-model="date" label="WEBSRF date."></v-text-field>
+        </v-form>
+      </v-sheet>
     </v-row>
 
-    <!-- Display selected user details -->
-    <div v-if="selectedUser">
-      <p><strong>Selected User Details:</strong></p>
-      <p v-if="detailedUserData">
-        IIN: {{ detailedUserData.IIN }}<br />
-        Full Name: {{ detailedUserData.FIO }}<br />
-        Organization: {{ detailedUserData.orgName }}<br />
-        Department: {{ detailedUserData.depname }}<br />
-        Position: {{ detailedUserData.Post }}
-      </p>
-      <p v-else>
-        <em>No additional information available for this user.</em>
-      </p>
-    </div>
+    <v-row>
+      <v-col>
+        <v-autocomplete
+          v-model="selectedUser"
+          :items="userList"
+          item-text="full_name"
+          item-value="id"
+          label="Select or write user"
+          return-object
+          outlined
+          @change="handleUserSelection"
+        ></v-autocomplete>
 
-    <!-- Display selected project details -->
-    <div v-if="selectedProject">
-      <p><strong>Selected Project Details:</strong></p>
-      <p>Code: {{ selectedProject.code }}</p>
-      <p>Name: {{ selectedProject.name }}</p>
-      <p>GeneralName: {{ selectedProject.Generalname }}</p>
-    </div>
+        <div v-if="detailedUserData">
+          <p><strong>Selected User Details:</strong></p>
+          <p>Full Name: {{ detailedUserData.FIO }}</p>
+          <p>IIN: {{ detailedUserData.IIN }}</p>
+          <p>Organization Name: {{ detailedUserData.orgName }}</p>
+          <p>Organization BIN: {{ detailedUserData.orgBIN }}</p>
+          <p>Cost Name: {{ detailedUserData.CostName }}</p>
+          <p>Cost Code: {{ detailedUserData.CostCode }}</p>
+          <p>Position: {{ detailedUserData.Post }}</p>
+          <p>Department: {{ detailedUserData.depname }}</p>
+        </div>
+        <div v-else>
+          <p>
+            <em>No additional information available for this user.</em>
+          </p>
+        </div>
+      </v-col>
+      <v-col cols="6" class="text-right">
+        <!-- Autocomplete by Project Name -->
+        <v-autocomplete
+          v-model="selectedProjectByName"
+          :items="projectList"
+          item-text="name"
+          item-value="uid"
+          label="Search by Project Name"
+          return-object
+          outlined
+          @change="handleProjectNameChange"
+        ></v-autocomplete>
+
+        <!-- Autocomplete by Project Code (auto-fills when project name is selected) -->
+        <v-autocomplete
+          v-model="selectedProjectByCode"
+          :items="projectList"
+          item-text="code"
+          item-value="uid"
+          label="Search by Project Code"
+          return-object
+          outlined
+          @change="handleProjectCodeChange"
+        ></v-autocomplete>
+
+        <!-- Display selected project details -->
+        <div v-if="selectedProjectDetails">
+          <p><strong>Selected Project Details:</strong></p>
+          <p>Code: {{ selectedProjectDetails.code }}</p>
+          <p>Name: {{ selectedProjectDetails.name }}</p>
+          <p>UID: {{ selectedProjectDetails.uid }}</p>
+        </div>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -70,52 +85,60 @@ import axios from "axios";
 export default {
   data() {
     return {
+      firstName: "adilet",
+      date: "2024/08/01/11:39:30",
+      selectedProjectByName: null,
+      selectedProjectByCode: null,
+      selectedProjectDetails: null,
+      projectList: [],
       selectedUser: null,
-      selectedProject: null,
-      userList: [], // List of users from the main API
-      projectList: [], // List of projects from the project API
-      detailedUserData: null, // Data from the detailed API call
+      userList: [],
+      detailedUserData: null,
     };
   },
-  watch: {
-    selectedUser(newUser) {
-      if (newUser) {
-        this.fetchDetailedUserData(newUser.username);
-      } else {
-        this.detailedUserData = null;
-      }
-    },
-  },
   mounted() {
-    this.fetchUsers();
     this.fetchProjects();
+    this.fetchUsers();
   },
   methods: {
     async fetchUsers() {
       try {
         const response = await axios.get("http://intra.isker.kz/api/v1/users");
+        console.log("fetched data", response.data);
         if (Array.isArray(response.data)) {
           this.userList = response.data.map((user) => ({
             ...user,
             full_name: `${user.last_name} ${user.first_name}`.trim(),
           }));
+        } else {
+          console.log("Unexpected data structure:", response.data);
         }
       } catch (error) {
-        console.error("Error fetching user list:", error);
+        console.error(
+          "Error fetching user data:",
+          error.response ? error.response.data : error
+        );
       }
     },
-    async fetchDetailedUserData(username) {
-      try {
-        const response = await axios.get(
-          `http://192.168.0.67/api/v1/1c/websrf/getuser?iin=${username}`
-        );
-        this.detailedUserData = response.data.data || null;
-      } catch (error) {
-        if (error.response && error.response.status === 400) {
-          console.warn("No data found for the provided IIN.");
-          this.detailedUserData = null;
-        } else {
-          console.error("Error fetching detailed user data:", error.message);
+    async handleUserSelection(user) {
+      if (user && user.username) {
+        try {
+          const response = await axios.get(
+            `http://192.168.0.67/api/v1/1c/websrf/getuser?iin=${user.username}`
+          );
+          console.log("Detailed user data:", response.data);
+          if (response.data && response.data.data) {
+            this.detailedUserData = response.data.data;
+          } else {
+            console.error("Unexpected detailed data structure:", response.data);
+          }
+        } catch (error) {
+          if (error.response && error.response.status === 400) {
+            console.warn("No data found for the provided IIN.");
+            this.detailedUserData = null; // Or show a specific message in the UI
+          } else {
+            console.error("Error fetching detailed user data:", error.message);
+          }
         }
       }
     },
@@ -128,11 +151,11 @@ export default {
           this.projectList = this.flattenProjects(response.data);
         }
       } catch (error) {
-        console.error("Error fetching project list:", error);
+        console.error("Error fetching project data:", error);
       }
     },
     flattenProjects(projects) {
-      // Helper function to flatten nested project data
+      // Flatten nested project data for easier access in autocompletes
       const flatList = [];
       function flatten(items) {
         items.forEach((item) => {
@@ -140,7 +163,6 @@ export default {
             code: item.code,
             name: item.name,
             uid: item.uid,
-            Generalname: item.Generalname,
           });
           if (item.items && item.items.length > 0) {
             flatten(item.items);
@@ -149,6 +171,32 @@ export default {
       }
       flatten(projects);
       return flatList;
+    },
+    handleProjectNameChange(selectedProject) {
+      if (selectedProject) {
+        this.selectedProjectDetails = selectedProject;
+        // Set the selected project by code based on name selection
+        this.selectedProjectByCode = this.projectList.find(
+          (project) => project.uid === selectedProject.uid
+        );
+      } else {
+        // Reset both fields if no project is selected by name
+        this.selectedProjectByCode = null;
+        this.selectedProjectDetails = null;
+      }
+    },
+    handleProjectCodeChange(selectedProject) {
+      if (selectedProject) {
+        this.selectedProjectDetails = selectedProject;
+        // Set the selected project by name based on code selection
+        this.selectedProjectByName = this.projectList.find(
+          (project) => project.uid === selectedProject.uid
+        );
+      } else {
+        // Reset both fields if no project is selected by code
+        this.selectedProjectByName = null;
+        this.selectedProjectDetails = null;
+      }
     },
   },
 };
