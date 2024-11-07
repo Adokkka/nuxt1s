@@ -4,7 +4,7 @@
       <v-col>
         <h1>WebSRF_FORM</h1>
       </v-col>
-      <v-sheet class="mx-auto" width="300" color="#121212">
+      <v-sheet class="mx-auto" width="300">
         <v-form disabled>
           <v-text-field v-model="firstName" label="WEBSRF NO."></v-text-field>
           <v-text-field v-model="date" label="WEBSRF date."></v-text-field>
@@ -33,13 +33,10 @@
           <p>Organization BIN: {{ detailedUserData.orgBIN }}</p>
           <p>Cost Name: {{ detailedUserData.CostName }}</p>
           <p>Cost Code: {{ detailedUserData.CostCode }}</p>
-          <p>Position: {{ detailedUserData.Post }}</p>
-          <p>Department: {{ detailedUserData.depname }}</p>
+          <p>Position: {{ selectedUser.phone }}</p>
         </div>
         <div v-else>
-          <p>
-            <em>No additional information available for this user.</em>
-          </p>
+          <em>No additional information available for this user.</em>
         </div>
       </v-col>
       <v-col cols="6" class="text-right">
@@ -48,7 +45,7 @@
           v-model="selectedProjectByName"
           :items="projectList"
           item-text="name"
-          item-value="uid"
+          item-value="Generalname"
           label="Search by Project Name"
           return-object
           outlined
@@ -76,6 +73,106 @@
         </div>
       </v-col>
     </v-row>
+    <v-row>
+      <v-col>
+        <v-sheet class="mx-auto">
+          <v-form>
+            <v-textarea
+              v-model="Proposedsuppliers"
+              label="Предлагаемые поставщики:"
+              outlined
+              row-height="8"
+              auto-grow
+              clearable
+            ></v-textarea>
+            <v-textarea
+              v-model="Area"
+              label="Участок:"
+              outlined
+              auto-grow
+              row-height="8"
+              clearable
+            ></v-textarea>
+          </v-form>
+        </v-sheet>
+      </v-col>
+      <v-col>
+        <v-autocomplete
+          v-model="type_expenditure"
+          item-text="name"
+          label="Вид статьи расходов"
+          return-object
+          outlined
+          :items="expenditureTypes"
+          item-value="id"
+          required
+          row-height="8"
+          @change="fetchExpenditure"
+        ></v-autocomplete>
+        <div
+          v-if="
+            (type_expenditure &&
+              type_expenditure.name === 'Reimbursable_by_Client') ||
+            (type_expenditure && type_expenditure.name === 'Backcharge')
+          "
+        >
+          <v-autocomplete
+            item-text="name"
+            return-object
+            outlined
+            :items="clientList"
+            @change="fetchClient"
+            v-model="client_code"
+            label="Клиент"
+            item-value="bin"
+            required
+          ></v-autocomplete>
+          <v-textarea
+            v-model="Area"
+            label="Ссылочный документ:"
+            outlined
+            auto-grow
+            row-height="8"
+            clearable
+          ></v-textarea>
+          <div v-if="client_code">
+            <p><strong>Selected client Details:</strong></p>
+            <p>Code: {{ client_code.code }}</p>
+            <p>Name: {{ client_code.name }}</p>
+            <p>BIN: {{ client_code.bin }}</p>
+          </div>
+        </div>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col>
+        <v-text-field
+          v-model="reference_document"
+          outlined
+          label="USD"
+          disabled
+        ></v-text-field>
+      </v-col>
+      <v-col>
+        <v-select
+          v-model="extra_project"
+          label="Project/Non-project"
+          :items="['Project', 'Non-Project']"
+          outlined
+        ></v-select>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col>
+        <V-textarea
+          v-model="description_works"
+          label="Описание работ"
+          auto-grow
+          outlined
+        >
+        </V-textarea
+      ></v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -85,8 +182,10 @@ import axios from "axios";
 export default {
   data() {
     return {
-      firstName: "adilet",
-      date: "2024/08/01/11:39:30",
+      firstName: "empty",
+      date: "empty",
+      Area: "",
+      Proposedsuppliers: "",
       selectedProjectByName: null,
       selectedProjectByCode: null,
       selectedProjectDetails: null,
@@ -94,13 +193,64 @@ export default {
       selectedUser: null,
       userList: [],
       detailedUserData: null,
+      type_expenditure: null,
+      expenditureTypes: [],
+      client_code: null,
+      clientList: [],
+      radios: "",
+      description_works: "",
+      currency: "USD",
+      reference_document: "",
+      extra_project: "",
     };
   },
   mounted() {
     this.fetchProjects();
     this.fetchUsers();
+    this.fetchExpenditure();
+    this.fetchClient();
   },
   methods: {
+    async fetchExpenditure() {
+      try {
+        const response = await axios.get(
+          "http://192.168.0.67/api/v1/websrf/getexpenditure"
+        );
+        console.log("fetched data", response.data);
+        if (Array.isArray(response.data)) {
+          this.expenditureTypes = response.data.map((expenditure) => ({
+            ...expenditure,
+          }));
+        } else {
+          console.log("Unexpected data structure:", response.data);
+        }
+      } catch (error) {
+        console.error(
+          "Error fetching user data:",
+          error.response ? error.response.data : error
+        );
+      }
+    },
+    async fetchClient() {
+      try {
+        const response = await axios.get(
+          "http://1c-main/testIvan/hs/intra/getclientlist"
+        );
+        console.log("fetched data", response.data);
+        if (Array.isArray(response.data)) {
+          this.clientList = response.data.map((client) => ({
+            ...client,
+          }));
+        } else {
+          console.log("Unexpected data structure:", response.data);
+        }
+      } catch (error) {
+        console.error(
+          "Error fetching user data:",
+          error.response ? error.response.data : error
+        );
+      }
+    },
     async fetchUsers() {
       try {
         const response = await axios.get("http://intra.isker.kz/api/v1/users");

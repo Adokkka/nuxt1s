@@ -60,9 +60,7 @@ export default {
   methods: {
     async fetchProjects() {
       try {
-        const response = await axios.get(
-          "http://1c-main/testIvan/hs/intra/getcostcentertree"
-        );
+        const response = await axios.get("data/getcostcentertree.json");
         if (Array.isArray(response.data)) {
           this.projectList = this.flattenProjects(response.data);
         }
