@@ -1,120 +1,91 @@
 <template>
-  <v-container>
-    <!-- Main Project Selection -->
+  <div>
+    <!-- Search by Generalname -->
     <v-autocomplete
-      v-model="selectedProject"
-      :items="projectList"
-      item-text="name"
-      item-value="uid"
-      label="Select Project"
-      return-object
+      v-model="selectedGeneralname"
+      :items="uniqueGeneralnames"
+      label="Search by Generalname"
       outlined
-      @change="handleProjectChange"
+      @change="resetSelection"
+      required
     ></v-autocomplete>
 
-    <!-- Display main project details -->
-    <div v-if="selectedProject">
-      <p><strong>Main Project Details:</strong></p>
-      <p>Code: {{ selectedProject.code }}</p>
-      <p>Name: {{ selectedProject.name }}</p>
-    </div>
+    <!-- Search objects related to the selected Generalname -->
+    <v-autocomplete
+      v-model="selectedObject"
+      :items="filteredObjects"
+      item-text="name"
+      item-value="uid"
+      label="Search Related Objects"
+      return-object
+      outlined
+    ></v-autocomplete>
 
-    <!-- Dynamic nested project selection -->
-    <div v-for="(subProject, index) in selectedSubProjects" :key="index">
-      <v-autocomplete
-        v-model="subProject.selected"
-        :items="subProject.items"
-        item-text="name"
-        item-value="uid"
-        label="Select Subproject"
-        return-object
-        outlined
-        @change="handleSubProjectChange(index)"
-      ></v-autocomplete>
-
-      <div v-if="subProject.selected">
-        <p>
-          <strong>Subproject Level {{ index + 1 }} Details:</strong>
-        </p>
-        <p>Code: {{ subProject.selected.code }}</p>
-        <p>Name: {{ subProject.selected.name }}</p>
-      </div>
+    <!-- Display selected object details -->
+    <div v-if="selectedObject" class="object-details">
+      <h3>Selected Object Details:</h3>
+      <p><strong>Name:</strong> {{ selectedObject.name }}</p>
+      <p><strong>Code:</strong> {{ selectedObject.code }}</p>
+      <p><strong>UID:</strong> {{ selectedObject.uid }}</p>
+      <p><strong>Generalname:</strong> {{ selectedObject.Generalname }}</p>
     </div>
-  </v-container>
+  </div>
 </template>
 
 <script>
 import axios from "axios";
+import data from "../public/data/getcostcentertree.json";
 
 export default {
   data() {
     return {
-      selectedProject: null,
+      selectedGeneralname: null,
+      selectedObject: null,
       projectList: [],
-      selectedSubProjects: [], // Dynamic list for nested subproject selections
     };
   },
-  mounted() {
-    this.fetchProjects();
+  computed: {
+    uniqueGeneralnames() {
+      return Array.from(
+        new Set(this.projectList.map((item) => item.Generalname))
+      );
+    },
+    filteredObjects() {
+      return this.projectList.filter(
+        (item) => item.Generalname === this.selectedGeneralname
+      );
+    },
+  },
+  async mounted() {
+    try {
+      this.projectList = this.flattenData(data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
   },
   methods: {
-    async fetchProjects() {
-      try {
-        const response = await axios.get("data/getcostcentertree.json");
-        if (Array.isArray(response.data)) {
-          this.projectList = this.flattenProjects(response.data);
+    resetSelection() {
+      this.selectedObject = null;
+    },
+    flattenData(data) {
+      return data.reduce((acc, item) => {
+        acc.push(item);
+        if (item.items?.length) {
+          acc.push(...this.flattenData(item.items));
         }
-      } catch (error) {
-        console.error("Error fetching project list:", error);
-      }
-    },
-    flattenProjects(projects) {
-      // Helper function to flatten the main project list
-      const flatList = [];
-      function flatten(items) {
-        items.forEach((item) => {
-          flatList.push({
-            code: item.code,
-            name: item.name,
-            uid: item.uid,
-            items: item.items || [],
-            itemscol: item.itemscol || 0,
-          });
-          if (item.items && item.items.length > 0) {
-            flatten(item.items);
-          }
-        });
-      }
-      flatten(projects);
-      return flatList;
-    },
-    handleProjectChange(project) {
-      // Clear previous subprojects when a new main project is selected
-      this.selectedSubProjects = [];
-      if (project && project.itemscol > 0) {
-        // Add initial subproject list if itemscol > 0
-        this.selectedSubProjects.push({
-          items: project.items,
-          selected: null,
-        });
-      }
-    },
-    handleSubProjectChange(index) {
-      const selectedSubProject = this.selectedSubProjects[index].selected;
-      // Clear all sublevels below the current index
-      this.selectedSubProjects.splice(index + 1);
-      // If the selected subproject has further nested items, add a new selection level
-      if (selectedSubProject && selectedSubProject.itemscol > 0) {
-        this.selectedSubProjects.push({
-          items: selectedSubProject.items,
-          selected: null,
-        });
-      }
+        return acc;
+      }, []);
     },
   },
 };
 </script>
 
 <style scoped>
-/* Add any custom styles here */
+.object-details {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
 </style>

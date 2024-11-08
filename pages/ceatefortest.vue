@@ -40,34 +40,38 @@
         </div>
       </v-col>
       <v-col cols="6" class="text-right">
-        <!-- Autocomplete by Project Name -->
-        <v-autocomplete
-          v-model="selectedProjectByName"
-          :items="projectList"
-          item-text="name"
-          item-value="Generalname"
-          label="Search by Project Name"
-          return-object
-          outlined
-        ></v-autocomplete>
+        <div>
+          <!-- Search by Generalname -->
+          <v-autocomplete
+            v-model="selectedGeneralname"
+            :items="uniqueGeneralnames"
+            label="Search by Generalname"
+            outlined
+            @change="resetSelection"
+            required
+          ></v-autocomplete>
 
-        <!-- Autocomplete by Project Code (auto-fills when project name is selected) -->
-        <v-autocomplete
-          v-model="selectedProjectByCode"
-          :items="projectList"
-          item-text="name"
-          item-value="uid"
-          label="Search by Project Code"
-          return-object
-          outlined
-        ></v-autocomplete>
+          <!-- Search objects related to the selected Generalname -->
+          <v-autocomplete
+            v-model="selectedObject"
+            :items="filteredObjects"
+            item-text="name"
+            item-value="uid"
+            label="Search Related Objects"
+            return-object
+            outlined
+          ></v-autocomplete>
 
-        <!-- Display selected project details -->
-        <div v-if="selectedProjectDetails">
-          <p><strong>Selected Project Details:</strong></p>
-          <p>Code: {{ selectedProjectDetails.code }}</p>
-          <p>Name: {{ selectedProjectDetails.name }}</p>
-          <p>UID: {{ selectedProjectDetails.uid }}</p>
+          <!-- Display selected object details -->
+          <div v-if="selectedObject" class="object-details">
+            <h3>Selected Object Details:</h3>
+            <p><strong>Name:</strong> {{ selectedObject.name }}</p>
+            <p><strong>Code:</strong> {{ selectedObject.code }}</p>
+            <p><strong>UID:</strong> {{ selectedObject.uid }}</p>
+            <p>
+              <strong>Generalname:</strong> {{ selectedObject.Generalname }}
+            </p>
+          </div>
         </div>
       </v-col>
     </v-row>
@@ -176,7 +180,7 @@
 
 <script>
 import axios from "axios";
-import costcenter from "../public/data/getcostcentertree.json";
+import data from "../public/data/getcostcentertree.json";
 export default {
   data() {
     return {
@@ -187,7 +191,7 @@ export default {
       selectedProjectByName: null,
       selectedProjectByCode: null,
       selectedProjectDetails: null,
-      projectList: costcenter,
+
       selectedUser: null,
       userList: [],
       detailedUserData: null,
@@ -200,6 +204,9 @@ export default {
       currency: "USD",
       reference_document: "",
       extra_project: "",
+      selectedGeneralname: null,
+      selectedObject: null,
+      projectList: [],
     };
   },
   mounted() {
@@ -228,6 +235,18 @@ export default {
           error.response ? error.response.data : error
         );
       }
+    },
+    resetSelection() {
+      this.selectedObject = null;
+    },
+    flattenData(data) {
+      return data.reduce((acc, item) => {
+        acc.push(item);
+        if (item.items?.length) {
+          acc.push(...this.flattenData(item.items));
+        }
+        return acc;
+      }, []);
     },
     async fetchClient() {
       try {
@@ -320,6 +339,25 @@ export default {
       flatten(projects);
       return flatList;
     },
+  },
+  computed: {
+    uniqueGeneralnames() {
+      return Array.from(
+        new Set(this.projectList.map((item) => item.Generalname))
+      );
+    },
+    filteredObjects() {
+      return this.projectList.filter(
+        (item) => item.Generalname === this.selectedGeneralname
+      );
+    },
+  },
+  async mounted() {
+    try {
+      this.projectList = this.flattenData(data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
   },
 };
 </script>
