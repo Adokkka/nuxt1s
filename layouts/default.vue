@@ -46,7 +46,10 @@
 </template>
 
 <script>
-import { createVuetify } from "vuetify";
+//import Vue from "vue";
+//import VueTreeList from "vue-tree-list";
+
+//Vue.use(VueTreeList);
 export default {
   name: "DefaultLayout",
   data: () => ({

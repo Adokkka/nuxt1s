@@ -274,6 +274,26 @@
         </v-data-table>
       </v-col>
     </v-row>
+    <v-row>
+      <v-col>
+        <h2>Draggable Treeview Example</h2>
+        <v-draggable-treeview
+          :items="treeData"
+          item-text="name"
+          item-value="id"
+          item-children="children"
+          v-model="selectedItems"
+          dense
+          activatable
+          draggable
+          open-on-click
+        >
+          <template v-slot:prepend="{ item }">
+            <v-icon small>{{ item.icon }}</v-icon>
+          </template>
+        </v-draggable-treeview>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -285,6 +305,27 @@ import client from "../public/data/getclientlist.json";
 export default {
   data() {
     return {
+      treeData: [
+        {
+          id: 1,
+          name: "Parent 1",
+          icon: "mdi-folder",
+          children: [
+            { id: 2, name: "Child 1.1", icon: "mdi-file" },
+            { id: 3, name: "Child 1.2", icon: "mdi-file" },
+          ],
+        },
+        {
+          id: 4,
+          name: "Parent 2",
+          icon: "mdi-folder",
+          children: [
+            { id: 5, name: "Child 2.1", icon: "mdi-file" },
+            { id: 6, name: "Child 2.2", icon: "mdi-file" },
+          ],
+        },
+      ],
+      selectedItems: [],
       headers: [
         { text: "ID", value: "id", align: "start" },
         { text: "Value", value: "percentual" },
@@ -359,6 +400,9 @@ export default {
     this.fetchExpenditure();
   },
   methods: {
+    handleSelection(items) {
+      console.log("Selected items:", items);
+    },
     addRow() {
       this.tableData.push({
         id: this.nextId++,

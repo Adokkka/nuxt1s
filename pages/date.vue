@@ -1,40 +1,49 @@
+<!-- Vue SFC -->
 <template>
-  <v-row>
-    <v-col cols="12" sm="6" md="4">
-      <v-menu
-        v-model="menu2"
-        :close-on-content-click="false"
-        :nudge-right="40"
-        transition="scale-transition"
-        offset-y
-        min-width="auto"
-      >
-        <template v-slot:activator="{ on, attrs }">
-          <v-text-field
-            v-model="date"
-            label="Picker without buttons"
-            prepend-icon="mdi-calendar"
-            readonly
-            v-bind="attrs"
-            v-on="on"
-          ></v-text-field>
-        </template>
-        <v-date-picker v-model="date" @input="menu2 = false"></v-date-picker>
-      </v-menu>
-    </v-col>
-    <v-spacer></v-spacer>
-  </v-row>
+  <div id="app">
+    <treeselect v-model="value" :multiple="true" :options="options" />
+  </div>
 </template>
 
 <script>
+// import the component
+import Treeselect from "@riophae/vue-treeselect";
+// import the styles
+import "@riophae/vue-treeselect/dist/vue-treeselect.css";
+
 export default {
-  data: () => ({
-    date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-      .toISOString()
-      .substr(0, 10),
-    menu: false,
-    modal: false,
-    menu2: false,
-  }),
+  // register the component
+  components: { Treeselect },
+  data() {
+    return {
+      // define the default value
+      value: null,
+      // define options
+      options: [
+        {
+          id: "a",
+          label: "a",
+          children: [
+            {
+              id: "aa",
+              label: "aa",
+            },
+            {
+              id: "ab",
+              label: "ab",
+            },
+          ],
+        },
+        {
+          id: "b",
+          label: "b",
+        },
+        {
+          id: "c",
+          label: "c",
+        },
+      ],
+    };
+  },
 };
 </script>
