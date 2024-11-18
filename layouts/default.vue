@@ -78,6 +78,11 @@ export default {
           text: "create websrf",
           route: "/create",
         },
+        {
+          icon: "mdi-document",
+          text: "create websrf old",
+          route: "/websrf",
+        },
       ];
     },
   },
