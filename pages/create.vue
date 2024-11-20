@@ -7,19 +7,18 @@
       <v-sheet class="mx-auto" width="300">
         <v-form disabled>
           <v-text-field
-            v-model="firstName"
-            label="WEBSRF NO."
+            v-model="project.order_number"
+            label="SRF No./ № заявки:"
             outlined
           ></v-text-field>
           <v-text-field
-            v-model="date"
-            label="WEBSRF Date"
+            v-model="project.order_date"
+            label="Дата заявки:"
             outlined
           ></v-text-field>
         </v-form>
       </v-sheet>
     </v-row>
-
     <v-row>
       <v-col>
         <v-autocomplete
@@ -83,14 +82,14 @@
         <v-sheet class="mx-auto">
           <v-form>
             <v-textarea
-              v-model="Proposedsuppliers"
+              v-model="project.supplier"
               label="Предлагаемые поставщики"
               outlined
               auto-grow
               clearable
             ></v-textarea>
             <v-textarea
-              v-model="Area"
+              v-model="project.area"
               label="Участок"
               outlined
               auto-grow
@@ -101,8 +100,8 @@
       </v-col>
 
       <v-col>
-        <v-autocomplete
-          v-model="type_expenditure"
+        <v-select
+          v-model="project.type_expenditure"
           item-text="name"
           label="Вид статьи расходов"
           return-object
@@ -111,7 +110,7 @@
           item-value="id"
           required
           @change="fetchExpenditure"
-        ></v-autocomplete>
+        ></v-select>
 
         <div v-if="showClientAutocomplete">
           <v-autocomplete
@@ -125,7 +124,7 @@
             @change="fetchClientDetails"
           ></v-autocomplete>
           <v-textarea
-            v-model="documents"
+            v-model="project.documents"
             label="Ссылочный документ"
             outlined
             auto-grow
@@ -144,15 +143,15 @@
     <v-row>
       <v-col>
         <v-text-field
-          v-model="reference_document"
+          v-model="project.currency"
           outlined
-          label="USD"
+          label="currency"
           disabled
         ></v-text-field>
       </v-col>
       <v-col>
         <v-select
-          v-model="extra_project"
+          v-model="project.extra_project"
           label="Project/Non-project"
           :items="['Project', 'Non-Project']"
           outlined
@@ -163,7 +162,7 @@
     <v-row>
       <v-col>
         <v-textarea
-          v-model="description_works"
+          v-model="project.description_works"
           label="Описание работ"
           auto-grow
           outlined
@@ -328,14 +327,7 @@
         </v-data-table>
       </v-col>
     </v-row>
-    <v-btn
-      class="ma-2"
-      outlined
-      href="../public/data/getclientlist.json"
-      download
-    >
-      Download PDF
-    </v-btn>
+    <v-btn @click="submitForm" color="primary"> Отправить заявку </v-btn>
   </v-container>
 </template>
 
@@ -347,11 +339,22 @@ import Treeselect from "@riophae/vue-treeselect";
 import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 import service from "../public/data/getservicestree.json";
 import measure from "../public/data/getmeasurelist.json";
+import moment from "moment";
 
 export default {
   components: { Treeselect },
   data() {
     return {
+      project: {
+        order_number: "",
+        order_date: "",
+        supplier: "",
+        area: "",
+        description_works: "",
+        currency: "USD",
+        documents: "",
+        type_expenditure: null,
+      },
       value: null,
       options: service,
       normalizer(node) {
@@ -393,24 +396,18 @@ export default {
 
       modal: false,
       menu2: false,
-      firstName: "empty",
-      date: "empty",
-      Area: "",
-      documents: "",
-      Proposedsuppliers: "",
+
       selectedUser: null,
       userList: [],
-      detailedUserData: null,
-      type_expenditure: null,
+      detailedUserData: null, // выдает данные об юзере
+      date_shipment: moment(new Date()).format("YYYY-MM-DD"),
       expenditureTypes: [],
-      client_code: null,
+      client_code: null, //дает данные клиент кода
       clientList: client,
       measure: measure,
-      description_works: "",
-      reference_document: "",
       extra_project: "",
       selectedGeneralname: null,
-      selectedObject: null,
+      selectedObject: null, //выдает данные об выбранном проекте
       projectList: this.flattenData(data),
       loading: false,
       error: null,
@@ -427,9 +424,9 @@ export default {
     },
     showClientAutocomplete() {
       return (
-        this.type_expenditure &&
+        this.project.type_expenditure &&
         ["Reimbursable_by_Client", "Backcharge"].includes(
-          this.type_expenditure.name
+          this.project.type_expenditure.name
         )
       );
     },
@@ -509,6 +506,20 @@ export default {
         }
         return acc;
       }, []);
+    },
+    async submitForm() {
+      try {
+        const response = await axios.post(
+          "http://192.168.0.67/",
+
+          this.date_shipment
+        );
+        console.log("Заявка успешно отправлена:", response.data);
+        alert("Заявка успешно отправлена!");
+      } catch (error) {
+        console.error("Ошибка при отправке заявки:", error);
+        alert("Произошла ошибка при отправке.");
+      }
     },
   },
 };
