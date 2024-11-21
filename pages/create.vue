@@ -287,7 +287,7 @@
                 ></v-text-field>
               </td>
 
-              <td width="5%">
+              <!-- <td width="5%">
                 <v-select
                   v-model="item.measure"
                   :items="measure"
@@ -298,7 +298,7 @@
                   class="rounded-0"
                   label="Ед. изм."
                 ></v-select>
-              </td>
+              </td> */-->
 
               <td width="5%">
                 <v-text-field
@@ -310,9 +310,9 @@
                 ></v-text-field>
               </td>
 
-              <td width="40%">
+              <td width="45%">
                 <treeselect
-                  v-model="item.value"
+                  v-model="item.budgetcode"
                   :options="options"
                   :normalizer="normalizer"
                   class="mb-6 rounded-0"
@@ -353,13 +353,14 @@ export default {
         description_works: "",
         currency: "USD",
         documents: "",
-        type_expenditure: null,
+        type_expenditure: "",
+        date_shipment: moment(new Date()).format("YYYY-MM-DD"),
       },
       value: null,
       options: service,
       normalizer(node) {
         return {
-          id: node.uid,
+          id: node.code,
           label: node.name,
           children:
             node.items && node.items.length > 0 ? node.items : undefined,
@@ -372,7 +373,7 @@ export default {
         { text: "Start Date", value: "startDate" },
         { text: "End Date", value: "endDate" },
         { text: "count", value: "count" },
-        { text: "measure", value: "measure" },
+        //{ text: "measure", value: "measure" },-->
         { text: "price", value: "price" },
         { text: "budgetcode", value: "budgetcode" },
       ],
@@ -383,7 +384,7 @@ export default {
           startDate: null,
           endDate: null,
           count: null,
-          measure: null,
+          // measure: null,
           price: null,
           budgetcode: null,
         },
@@ -400,9 +401,9 @@ export default {
       selectedUser: null,
       userList: [],
       detailedUserData: null, // выдает данные об юзере
-      date_shipment: moment(new Date()).format("YYYY-MM-DD"),
+
       expenditureTypes: [],
-      client_code: null, //дает данные клиент кода
+      client_code: "", //дает данные клиент кода
       clientList: client,
       measure: measure,
       extra_project: "",
@@ -507,13 +508,56 @@ export default {
         return acc;
       }, []);
     },
+    prepareProject() {
+      return {
+        supplier: this.project.supplier,
+        order_number: this.project.order_number,
+        order_date: this.project.order_date,
+        description_works: this.project.description_works,
+        cost_name: this.selectedObject.name,
+        cost_code: this.selectedObject.code,
+        //is_draft: this.project.is_draft,
+        client_code: this.client_code.name || "",
+        extra_project: this.project.extra_project,
+        reference_document: this.project.documents,
+        area: this.project.area,
+        type_expenditure: this.project.type_expenditure.name,
+        date_shipment: this.project.date_shipment,
+      };
+    },
+    prepareUser() {
+      return {
+        org_name: this.detailedUserData.orgName,
+        autor_name: this.detailedUserData.FIO,
+        departament: this.detailedUserData.CostName,
+        position: this.detailedUserData.Post,
+        contacts: this.selectedUser.phone,
+      };
+    },
+    prepareNomenclature() {
+      const nomenclature = this.tableData.budgetcode.map((item) => {
+        return {
+          uid: item.uid,
+          name: item.name,
+        };
+      });
+      console.log("Nomenclature:", nomenclature);
+      return nomenclature;
+    },
+
     async submitForm() {
       try {
-        const response = await axios.post(
-          "http://192.168.0.67/",
-
-          this.date_shipment
-        );
+        const data123 = {
+          //project: this.prepareProject(),
+          //user: this.prepareUser() || null,
+          //works: this.prepareNomenclature(),
+          table: this.tableData,
+        };
+        const response = await axios.post("http://192.168.0.67/", data123, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         console.log("Заявка успешно отправлена:", response.data);
         alert("Заявка успешно отправлена!");
       } catch (error) {
