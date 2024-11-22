@@ -327,6 +327,57 @@
         </v-data-table>
       </v-col>
     </v-row>
+    <v-row>
+      <v-col>
+        <v-card>
+          <v-card-title class="d-flex justify-space-between">
+            <span>Загрузка файлов</span>
+            <v-btn color="primary" @click="addRowfile" outlined>
+              <v-icon left>mdi-plus</v-icon> Добавить строку
+            </v-btn>
+          </v-card-title>
+          <v-card-text>
+            <v-data-table
+              :headers="headersfor"
+              :items="rows"
+              hide-default-footer
+              class="elevation-2"
+            >
+              <template v-slot:body="{ items }">
+                <tbody>
+                  <tr v-for="(item, index) in items" :key="index">
+                    <td>{{ index + 1 }}</td>
+                    <td>
+                      <v-text-field
+                        v-model="item.description"
+                        label="Описание"
+                        outlined
+                        dense
+                      />
+                    </td>
+                    <td>
+                      <v-file-input
+                        v-model="item.file"
+                        label="Файл"
+                        outlined
+                        dense
+                      />
+                    </td>
+                    <td>
+                      <v-btn color="error" icon @click="removeRowfile(index)">
+                        <v-icon>mdi-delete</v-icon>
+                      </v-btn>
+                    </td>
+                  </tr>
+                </tbody>
+              </template>
+            </v-data-table>
+          </v-card-text>
+          <v-card-actions class="d-flex justify-space-between">
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
     <v-btn @click="submitForm" color="primary"> Отправить заявку </v-btn>
   </v-container>
 </template>
@@ -412,6 +463,13 @@ export default {
       projectList: this.flattenData(data),
       loading: false,
       error: null,
+      headersfor: [
+        { text: "№", value: "id", align: "start" },
+        { text: "Описание", value: "description" },
+        { text: "Файл", value: "file" },
+        { text: "Действия", value: "actions", sortable: false },
+      ],
+      rows: [], // Данные для таблицы
     };
   },
   computed: {
@@ -458,7 +516,45 @@ export default {
         this.tableData.pop();
       }
     },
-
+    addRowfile() {
+      this.rows.push({
+        id: this.rows.length + 1,
+        description: "",
+        file: null,
+      });
+    },
+    // Удалить строку
+    removeRowfile(index) {
+      this.rows.splice(index, 1);
+    },
+    convertFileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+    },
+    async handleAllRowsUpload() {
+      try {
+        const results = await Promise.all(
+          this.rows.map(async (row, index) => {
+            if (!row.file) {
+              throw new Error(`Файл в строке ${index + 1} не выбран`);
+            }
+            const base64File = await this.convertFileToBase64(row.file);
+            return {
+              description: row.description,
+              file: base64File,
+            };
+          })
+        );
+        return results; // Возвращаем массив данных
+      } catch (error) {
+        console.error("Ошибка при обработке строк:", error);
+        throw error; // Пробрасываем ошибку для дальнейшей обработки
+      }
+    },
     async fetchUsers() {
       try {
         this.loading = true;
@@ -523,6 +619,7 @@ export default {
         area: this.project.area,
         type_expenditure: this.project.type_expenditure.name,
         date_shipment: this.project.date_shipment,
+        //work: this.tableData,
       };
     },
     prepareUser() {
@@ -534,26 +631,20 @@ export default {
         contacts: this.selectedUser.phone,
       };
     },
-    prepareNomenclature() {
-      const nomenclature = this.tableData.budgetcode.map((item) => {
-        return {
-          uid: item.uid,
-          name: item.name,
-        };
-      });
-      console.log("Nomenclature:", nomenclature);
-      return nomenclature;
-    },
 
     async submitForm() {
       try {
+        const url =
+          "http://192.168.0.67/api/v1/websrf/create?iin=" +
+          this.detailedUserData.IIN;
         const data123 = {
-          //project: this.prepareProject(),
-          //user: this.prepareUser() || null,
-          //works: this.prepareNomenclature(),
-          table: this.tableData,
+          project: this.prepareProject(),
+          user: this.prepareUser(),
+          works: this.tableData,
+          docs: await this.handleAllRowsUpload(),
+          matrix: { privet: "aa" },
         };
-        const response = await axios.post("http://192.168.0.67/", data123, {
+        const response = await axios.post(url, data123, {
           headers: {
             "Content-Type": "application/json",
           },
