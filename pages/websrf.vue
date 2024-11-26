@@ -417,8 +417,8 @@ export default {
         order_number: "",
         order_date: "",
         description_works: "",
-        cost_name: "",
-        cost_code: "",
+        cost_name: "", //
+        cost_code: "", //
         is_draft: false,
         client_code: null,
         extra_project: "",

@@ -175,9 +175,8 @@
           v-model="selected"
           :headers="headers"
           :items="tableData"
-          hide-default-footer
           item-value="id"
-          class="elevation-1"
+          class="elevation-1 rounded-0 no-padding"
           outlined
         >
           <!-- Верхний слот с инструментами -->
@@ -201,8 +200,9 @@
                 <v-text-field
                   v-model="item.id"
                   dense
-                  disabled
                   outlined
+                  disabled
+                  border-e-lg
                   class="rounded-0"
                 ></v-text-field>
               </td>
@@ -211,9 +211,9 @@
                 <v-text-field
                   v-model="item.percentual"
                   dense
-                  outlined
                   class="rounded-0"
                   label="Описание"
+                  outlined
                 ></v-text-field>
               </td>
 
@@ -340,8 +340,7 @@
             <v-data-table
               :headers="headersfor"
               :items="rows"
-              hide-default-footer
-              class="elevation-2"
+              class="elevation-1"
             >
               <template v-slot:body="{ items }">
                 <tbody>
@@ -666,5 +665,9 @@ export default {
   margin: 0%;
   width: 100px;
   height: 40px;
+}
+.no-padding {
+  padding: 0 !important;
+  margin: 0 !important;
 }
 </style>
