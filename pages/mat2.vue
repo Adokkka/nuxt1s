@@ -16,7 +16,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, index) in tableData" :key="row.uid">
+              <tr v-for="(row, index) in matrixtable" :key="row.uid">
                 <td>{{ row.name }}</td>
                 <td>
                   <v-select
@@ -53,7 +53,7 @@ export default {
   data() {
     return {
       dialog: false,
-      tableData: matrix,
+      matrixtable: matrix,
       selectedValues: [], // Хранение выбранных UID для каждой строки
       matrix: [], // Новый массив
     };
@@ -61,7 +61,7 @@ export default {
   methods: {
     saveSelection() {
       // Генерация нового массива
-      this.matrix = this.tableData.map((row, index) => {
+      this.matrix = this.matrixtable.map((row, index) => {
         const selectedItem = row.items.find(
           (item) => item.uid === this.selectedValues[index]
         );

@@ -7,7 +7,7 @@
       <v-sheet class="mx-auto" width="300">
         <v-form disabled>
           <v-text-field
-            v-model="project.order_number"
+            v-model="project.nomer"
             label="SRF No./ № заявки:"
             outlined
           ></v-text-field>
@@ -377,6 +377,41 @@
         </v-card>
       </v-col>
     </v-row>
+    <v-dialog v-model="dialog" max-width="800px">
+      <v-card>
+        <v-card-title>Таблица с выбором</v-card-title>
+        <v-card-text>
+          <v-simple-table>
+            <thead>
+              <tr>
+                <th>Имя</th>
+                <th>Выбор</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in matrixtable" :key="row.uid">
+                <td>{{ row.name }}</td>
+                <td>
+                  <v-select
+                    :items="row.items"
+                    item-text="name"
+                    item-value="uid"
+                    v-model="selectedValues[index]"
+                    label="Выберите"
+                  ></v-select>
+                </td>
+              </tr>
+            </tbody>
+          </v-simple-table>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="red" text @click="dialog = false">Закрыть</v-btn>
+          <v-btn color="green" text @click="saveSelection">Сохранить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-btn color="primary" @click="dialog = true">Открыть таблицу</v-btn>
     <v-btn @click="submitForm" color="primary"> Отправить заявку </v-btn>
   </v-container>
 </template>
@@ -390,13 +425,16 @@ import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 import service from "../public/data/getservicestree.json";
 import measure from "../public/data/getmeasurelist.json";
 import moment from "moment";
-
+import matrix from "../public/data/getmatrixlistwithitems.json";
+//import { v4 as uuidv4 } from "uuid";
 export default {
   components: { Treeselect },
+
   data() {
     return {
       project: {
-        order_number: "",
+        uid: "",
+        nomer: "",
         order_date: "",
         supplier: "",
         area: "",
@@ -427,6 +465,11 @@ export default {
         { text: "price", value: "price" },
         { text: "budgetcode", value: "budgetcode" },
       ],
+      dialog: false,
+      matrixtable: matrix,
+      selectedValues: [], // Хранение выбранных UID для каждой строки
+      matrix: [], // Новый массив
+
       tableData: [
         {
           id: 1,
@@ -494,6 +537,21 @@ export default {
     this.fetchExpenditure();
   },
   methods: {
+    saveSelection() {
+      // Генерация нового массива
+      this.matrix = this.matrixtable.map((row, index) => {
+        const selectedItem = row.items.find(
+          (item) => item.uid === this.selectedValues[index]
+        );
+        return {
+          element_name: row.namefull,
+          value_name: selectedItem ? selectedItem.name : null,
+          value_uid: selectedItem ? selectedItem.uid : null,
+        };
+      });
+      this.dialog = false;
+      console.log("Новый массив matrix:", this.matrix);
+    },
     handleSelection(items) {
       console.log("Selected items:", items);
     },
@@ -526,6 +584,11 @@ export default {
     removeRowfile(index) {
       this.rows.splice(index, 1);
     },
+    validateFile(item, index) {
+      if (!item.file) {
+        console.warn(`Файл в строке ${index + 1} не выбран`);
+      }
+    },
     convertFileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -534,26 +597,23 @@ export default {
         reader.readAsDataURL(file);
       });
     },
-    async handleAllRowsUpload() {
-      try {
-        const results = await Promise.all(
-          this.rows.map(async (row, index) => {
-            if (!row.file) {
-              throw new Error(`Файл в строке ${index + 1} не выбран`);
-            }
-            const base64File = await this.convertFileToBase64(row.file);
-            return {
-              description: row.description,
-              file: base64File,
-            };
-          })
-        );
-        return results; // Возвращаем массив данных
-      } catch (error) {
-        console.error("Ошибка при обработке строк:", error);
-        throw error; // Пробрасываем ошибку для дальнейшей обработки
+    async prepareRows() {
+      const preparedRows = [];
+      for (const [index, row] of this.rows.entries()) {
+        if (!row.file) {
+          throw new Error(`Файл в строке ${index + 1} не выбран`);
+        }
+        const base64File = await this.convertFileToBase64(row.file);
+        preparedRows.push({
+          item_number: index + 1,
+          item_description: row.description,
+          file_data: base64File,
+          filename: row.file.name,
+        });
       }
+      return preparedRows;
     },
+
     async fetchUsers() {
       try {
         this.loading = true;
@@ -571,9 +631,7 @@ export default {
     },
     async fetchExpenditure() {
       try {
-        const response = await axios.get(
-          "http://192.168.0.67/api/v1/websrf/getexpenditure"
-        );
+        const response = await axios.get("http://127.0.0.1:8000/customer-list");
         this.expenditureTypes = response.data;
       } catch (error) {
         console.error("Error fetching expenditures:", error);
@@ -603,45 +661,63 @@ export default {
         return acc;
       }, []);
     },
-    prepareProject() {
+    prepareUser() {
       return {
+        //org_name: this.detailedUserData.orgName,
+        //autor_name: this.detailedUserData.FIO,
+        //departament: this.detailedUserData.CostName,
+        //position: this.detailedUserData.Post,
+        contacts: this.selectedUser.phone,
+      };
+    },
+    async prepareProject() {
+      // const preparedRows = await this.prepareRows();
+
+      return {
+        //id: uuidv4(),
+        uid: "",
+        nomer: "",
+        //org_name: this.detailedUserData.orgName,
+        //org_bin: this.detailedUserData.orgBIN,
+        //autor_name: this.detailedUserData.FIO,
+        //autor_iin: this.detailedUserData.IIN,
+        //position: this.detailedUserData.Post,
         supplier: this.project.supplier,
         order_number: this.project.order_number,
         order_date: this.project.order_date,
-        description_works: this.project.description_works,
+        Comment: this.project.description_works,
         cost_name: this.selectedObject.name,
         cost_code: this.selectedObject.code,
-        //is_draft: this.project.is_draft,
+        is_draft: this.project.is_draft,
         client_code: this.client_code.name || "",
         extra_project: this.project.extra_project,
-        reference_document: this.project.documents,
+        ReferenceDocument: this.project.documents,
         area: this.project.area,
-        type_expenditure: this.project.type_expenditure.name,
+        TypeOfExpenditure: this.project.type_expenditure.name,
         date_shipment: this.project.date_shipment,
+        //services: this.tableData,
+        //matrix: this.matrix,
+        //refdocs: await this.prepareRows(),
+
         //work: this.tableData,
-      };
-    },
-    prepareUser() {
-      return {
-        org_name: this.detailedUserData.orgName,
-        autor_name: this.detailedUserData.FIO,
-        departament: this.detailedUserData.CostName,
-        position: this.detailedUserData.Post,
-        contacts: this.selectedUser.phone,
       };
     },
 
     async submitForm() {
       try {
         const url =
-          "http://192.168.0.67/api/v1/websrf/create?iin=" +
-          this.detailedUserData.IIN;
+          //"http://192.168.0.67/api/v1/websrf/create?iin=" +
+          "http://127.0.0.1:8000/expenditures/";
+        //this.detailedUserData.IIN;
         const data123 = {
-          project: this.prepareProject(),
-          user: this.prepareUser(),
-          works: this.tableData,
-          docs: await this.handleAllRowsUpload(),
-          matrix: { privet: "aa" },
+          project: await this.prepareProject(),
+          services: this.tableData,
+          matrix: this.matrix,
+          refdocs: await this.prepareRows(),
+          //tableData,
+          //works: this.tableData,
+          //docs: await this.handleAllRowsUpload(),
+          //matrix: { privet: "aa" },
         };
         const response = await axios.post(url, data123, {
           headers: {
